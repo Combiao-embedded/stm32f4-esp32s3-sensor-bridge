@@ -1,55 +1,69 @@
-# Prerequisites
-*.d
+# ==========================================
+# 1. Operating System & General
+# ==========================================
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.bak
+*.swp
+*~
 
-# Object files
+# ==========================================
+# 2. Local WiFi Credentials & Secrets (ESP32)
+# ==========================================
+secrets.h
+wifi_credentials.h
+.env
+
+# ==========================================
+# 3. Compiled Objects & Firmware Binaries
+# ==========================================
 *.o
-*.ko
 *.obj
-*.elf
-
-# Linker output
-*.ilk
-*.map
-*.exp
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
+*.d
 *.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
+*.elf
+*.bin
 *.hex
-
-# Debug files
-*.dSYM/
+*.s19
+*.map
+*.lst
 *.su
-*.idb
-*.pdb
+*.cyclo
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
+# ==========================================
+# 4. Build Directories (CubeIDE / ESP-IDF / CMake)
+# ==========================================
+build/
+Debug/
+Release/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
 
-# debug information files
-*.dwo
+# ==========================================
+# 5. STM32 Toolchains (STM32CubeIDE / Keil / IAR)
+# ==========================================
+.metadata/
+.settings/
+*.launch
+*.uvguix.*
+*.uvoptx
+DebugConfig/
+settings/
+
+# ==========================================
+# 6. ESP32-S3 Toolchains (ESP-IDF / PlatformIO / Arduino)
+# ==========================================
+sdkconfig.old
+managed_components/
+.pio/
+*.ino.cpp
+
+# ==========================================
+# 7. Editor Settings (VS Code)
+# ==========================================
+.vscode/*
+!.vscode/extensions.json
