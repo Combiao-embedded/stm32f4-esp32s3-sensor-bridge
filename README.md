@@ -1,6 +1,6 @@
 # STM32F4 & ESP32-S3 Sensor Bridge
 
-[![Build STM32F4 Firmware](https://github.com/Combiao-embedded/stm32f4-esp32s3-sensor-bridge/actions/workflows/build-stm32f4.yml/badge.svg)](https://github.com/Combiao-embedded/stm32f4-esp32s3-sensor-bridgew/actions/workflows/build-stm32f4.yml)
+[![Build STM32F4 Firmware](https://github.com/Combiao-embedded/stm32f4-esp32s3-sensor-bridge/actions/workflows/build-stm32f4.yml/badge.svg)](https://github.com/Combiao-embedded/stm32f4-esp32s3-sensor-bridge/actions/workflows/build-stm32f4.yml)
 [![Build ESP32-S3 Firmware](https://github.com/Combiao-embedded/stm32f4-esp32s3-sensor-bridge/actions/workflows/build-esp32s3.yml/badge.svg)](https://github.com/Combiao-embedded/stm32f4-esp32s3-sensor-bridge/actions/workflows/build-esp32s3.yml)
 
 Dual-microcontroller embedded system where an **STM32F4** handles real-time sensor reading and actuator control, while an **ESP32-S3** acts as a wireless WiFi bridge for remote monitoring and control.
@@ -48,8 +48,8 @@ Dual-microcontroller embedded system where an **STM32F4** handles real-time sens
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/Combiao-embeded/stm32f4-esp32s3-sensor-bridgew.git](https://github.com/Combiao-embeded/stm32f4-esp32s3-sensor-bridgew.git)
-   cd stm32f4-esp32s3-sensor-bridgew
+   git clone [https://github.com/Combiao-embedded/stm32f4-esp32s3-sensor-bridge.git](https://github.com/Combiao-embedded/stm32f4-esp32s3-sensor-bridge.git)
+   cd stm32f4-esp32s3-sensor-bridge
    ```
 2. **Verify wiring:** Review [`docs/wiring-pinout.md`](./docs/wiring-pinout.md) before powering on the boards (3.3V logic only).
 3. **Create a feature branch:** Never push directly to `main`.
