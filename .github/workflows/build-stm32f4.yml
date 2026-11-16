@@ -1,0 +1,40 @@
+name: Build STM32F4 Firmware
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'firmware-stm32f4/**'
+      - '.github/workflows/build-stm32f4.yml'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'firmware-stm32f4/**'
+      - '.github/workflows/build-stm32f4.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: firmware-stm32f4
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ARM GCC Toolchain & Build Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi cmake ninja-build make
+
+      - name: Compile STM32F4 Firmware
+        run: |
+          if [ -f "CMakeLists.txt" ]; then
+            cmake -B build -G Ninja
+            cmake --build build
+          elif [ -f "Makefile" ]; then
+            make -j$(nproc)
+          else
+            echo "No CMakeLists.txt or Makefile found yet — skipping compile."
+          fi

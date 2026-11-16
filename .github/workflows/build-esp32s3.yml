@@ -1,0 +1,41 @@
+name: Build ESP32-S3 Firmware
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'firmware-esp32s3/**'
+      - '.github/workflows/build-esp32s3.yml'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'firmware-esp32s3/**'
+      - '.github/workflows/build-esp32s3.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Check for ESP-IDF project
+        id: check
+        run: |
+          if [ -f "firmware-esp32s3/CMakeLists.txt" ]; then
+            echo "has_project=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_project=false" >> "$GITHUB_OUTPUT"
+            echo "No CMakeLists.txt found yet — skipping ESP-IDF build."
+          fi
+
+      - name: Build ESP32-S3 Firmware (ESP-IDF)
+        if: steps.check.outputs.has_project == 'true'
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5
+          target: esp32s3
+          path: firmware-esp32s3
