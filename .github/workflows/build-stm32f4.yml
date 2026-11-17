@@ -2,24 +2,27 @@ name: Build STM32F4 Firmware
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
 
 jobs:
   build-stm32f4:
     name: Build STM32F4
     runs-on: ubuntu-latest
-    container:
-      image: gabrielsimmer/stm32cubeide:latest
+    defaults:
+      run:
+        working-directory: firmware-stm32f4
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Compile STM32F4 Firmware
+      - name: Install ARM GCC Toolchain & CMake
         run: |
-          stm32cubeide --launcher.suppressErrors -nosplash \
-            -application org.eclipse.cdt.managedbuilder.core.headlessbuild \
-            -data /tmp/workspace \
-            -import ./firmware-stm32f4 \
-            -build all
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi cmake ninja-build
+
+      - name: Configure & Compile STM32F4 Firmware
+        run: |
+          cmake -B build -G Ninja
+          cmake --build build
