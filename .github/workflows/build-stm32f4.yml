@@ -9,26 +9,17 @@ jobs:
   build-stm32f4:
     name: Build STM32F4
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: firmware-stm32f4
+    container:
+      image: gabrielsimmer/stm32cubeide:latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install ARM GCC Toolchain & Build Tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi cmake ninja-build make
-
       - name: Compile STM32F4 Firmware
         run: |
-          if [ -f "CMakeLists.txt" ]; then
-            cmake -B build -G Ninja
-            cmake --build build
-          elif [ -f "Makefile" ]; then
-            make -j$(nproc)
-          else
-            echo "No CMakeLists.txt or Makefile found yet — skipping compile."
-          fi
+          stm32cubeide --launcher.suppressErrors -nosplash \
+            -application org.eclipse.cdt.managedbuilder.core.headlessbuild \
+            -data /tmp/workspace \
+            -import ./firmware-stm32f4 \
+            -build all
