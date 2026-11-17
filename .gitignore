@@ -76,3 +76,6 @@ build/
 .settings/
 .metadata/
 *.launch
+
+build/
+CMakeUserPresets.json
