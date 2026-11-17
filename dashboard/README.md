@@ -19,6 +19,8 @@ Browser (app.js) ──fetch PUT /message──> NETPIE ──@msg/cmd──> ES
 Browser (app.js) <──fetch GET /shadow── NETPIE <──shadow───── ESP32 <──UART── STM32
 ```
 
+The shadow can be as small as `{"reed_state": 1}` (`reed` and `reed_state` both work). If the board does not report `alarm`, the page raises the alarm itself when the door opens and clears it when you press Acknowledge.
+
 The page uses the NETPIE 2020 REST API (`https://api.netpie.io/v2/device`). The API allows browser requests (CORS `*`). The packet format is in [`docs/wiring-pinout.md`](../docs/wiring-pinout.md#4-dashboard-additions-proposed--needs-stm32--esp32-sign-off).
 
 ## Run it

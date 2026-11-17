@@ -8,6 +8,9 @@
  *
  * State the page expects (shadow "data"):
  *   { reed: 0|1, alarm: 0|1, buzzer: 0|1, rgb: [r,g,b], seq?: number }
+ * "reed_state" is accepted as an alias of "reed". Every other field is
+ * optional: if the board does not report "alarm", the page latches the
+ * alarm itself when the door opens and clears it on Acknowledge.
  * Commands it sends (JSON text on the command topic):
  *   { buzzer: 0|1 }   { rgb: [r,g,b] }   { ack: 1 }
  */
@@ -122,6 +125,8 @@ const ui = {
   alarmSince: 0,
   lastColor: [0, 255, 0], // colour to restore when the light is switched back on
   pending: null,          // { key, want, label, deadline }
+  boardAlarm: false,      // true when the board itself reports "alarm"
+  localAlarm: false,      // page-side alarm used when the board does not report one
 };
 
 /* ------------------------------------------------------------------ */
@@ -157,6 +162,10 @@ function render() {
   // Alarm banner
   $("alarm").hidden = !alarm;
   $("alarm-time").textContent = alarm ? `at ${clock(ui.alarmSince)}` : "";
+  const note = $("alarm-note"); // may be missing if the browser cached an older index.html
+  if (note) note.textContent = ui.boardAlarm
+    ? "The light and buzzer are alerting. Controls are locked until you acknowledge."
+    : "Press Acknowledge to dismiss.";
   $("ack-btn").disabled = !!(p && p.key === "alarm");
   document.title = alarm ? "⚠ Door opened · Door Guard" : "Door Guard";
 
@@ -204,15 +213,26 @@ function render() {
 /* State updates                                                       */
 /* ------------------------------------------------------------------ */
 
-function applyState(next) {
+function applyState(raw) {
   const prev = ui.state;
   const now = Date.now();
-  next = {
-    reed: next.reed ? 1 : 0,
-    alarm: next.alarm ? 1 : 0,
-    buzzer: next.buzzer ? 1 : 0,
-    rgb: Array.isArray(next.rgb) ? next.rgb.map(clamp) : [0, 0, 0],
-    seq: next.seq,
+  const reed = Number(raw.reed ?? raw.reed_state) ? 1 : 0;
+
+  ui.boardAlarm = "alarm" in raw;
+  let alarm;
+  if (ui.boardAlarm) {
+    alarm = raw.alarm ? 1 : 0;
+  } else {
+    if (reed && (!prev || !prev.reed)) ui.localAlarm = true; // door just opened
+    alarm = ui.localAlarm ? 1 : 0;
+  }
+
+  const next = {
+    reed,
+    alarm,
+    buzzer: raw.buzzer ? 1 : 0,
+    rgb: Array.isArray(raw.rgb) ? raw.rgb.map(clamp) : [0, 0, 0],
+    seq: raw.seq,
   };
 
   if (next.seq !== ui.lastSeq) {
@@ -231,7 +251,7 @@ function applyState(next) {
     }
     if (!prev.alarm && next.alarm) {
       ui.alarmSince = now;
-      log("Alarm triggered — light and buzzer on", "alarm");
+      log(ui.boardAlarm ? "Alarm triggered — light and buzzer on" : "Alarm triggered", "alarm");
       notify();
     }
     if (prev.alarm && !next.alarm) log("Alarm acknowledged", "ok");
@@ -310,7 +330,21 @@ $("buzzer-toggle").addEventListener("change", (e) => {
   command({ buzzer: on }, "buzzer", on, on ? "Buzzer turned on" : "Buzzer turned off");
 });
 
-$("ack-btn").addEventListener("click", () => command({ ack: 1 }, "alarm", 0, null));
+$("ack-btn").addEventListener("click", () => {
+  if (ui.boardAlarm) {
+    command({ ack: 1 }, "alarm", 0, null);
+    return;
+  }
+  // The board does not report "alarm": clear the page-side alarm now and
+  // still tell the board, in case its firmware handles {"ack":1}.
+  ui.localAlarm = false;
+  if (ui.state) {
+    ui.state = { ...ui.state, alarm: 0 };
+    log("Alarm acknowledged", "ok");
+    render();
+  }
+  transport.send({ ack: 1 }).catch(() => {});
+});
 
 /* ------------------------------------------------------------------ */
 /* Notifications                                                       */
