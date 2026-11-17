@@ -79,3 +79,6 @@ build/
 
 build/
 CMakeUserPresets.json
+
+# ESP32 Secrets
+secrets.h
