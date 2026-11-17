@@ -8,9 +8,14 @@
 #define STM32_TX_PIN 17
 #define STM32_BAUD   115200
 
-// NETPIE MQTT Broker
-const char* MQTT_SERVER = "mqtt.netpie.io";
-const int   MQTT_PORT   = 1883;
+// NETPIE MQTT Broker (ใช้ค่าจาก secrets.h ถ้ามีประกาศไว้แล้ว)
+#ifndef MQTT_SERVER
+#define MQTT_SERVER "mqtt.netpie.io"
+#endif
+
+#ifndef MQTT_PORT
+#define MQTT_PORT 1883
+#endif
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
