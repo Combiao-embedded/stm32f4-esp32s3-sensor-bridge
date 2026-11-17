@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Door Guard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <h1>Door Guard</h1>
+    </div>
+    <div class="conn" id="conn" data-state="connecting">
+      <span class="dot" aria-hidden="true"></span>
+      <span id="conn-text">Connecting…</span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- Alarm banner: shown while the device reports alarm = 1 -->
+    <section class="alarm" id="alarm" hidden role="alert">
+      <div class="alarm-body">
+        <strong>Door opened</strong>
+        <span id="alarm-time"></span>
+        <p>The light and buzzer are alerting. Controls are locked until you acknowledge.</p>
+      </div>
+      <button class="btn btn-alarm" id="ack-btn" type="button">Acknowledge</button>
+    </section>
+
+    <div class="grid">
+      <!-- Door status -->
+      <section class="card door" id="door-card" data-door="unknown">
+        <h2>Door</h2>
+        <div class="door-visual" aria-hidden="true">
+          <span class="door-frame"><span class="door-leaf"></span></span>
+        </div>
+        <p class="door-state" id="door-state">—</p>
+        <p class="muted" id="door-since"></p>
+      </section>
+
+      <!-- Light control -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Light</h2>
+          <label class="switch">
+            <input type="checkbox" id="light-toggle">
+            <span class="track"><span class="thumb"></span></span>
+            <span class="sr-only">Light on or off</span>
+          </label>
+        </div>
+
+        <div class="light-preview" id="light-preview">
+          <span class="bulb" id="bulb"></span>
+          <span class="light-label" id="light-label">Off</span>
+        </div>
+
+        <div class="swatches" id="swatches" role="group" aria-label="Preset colours">
+          <button type="button" class="swatch" data-rgb="255,255,255" style="--c:#ffffff" aria-label="White"></button>
+          <button type="button" class="swatch" data-rgb="255,0,0"     style="--c:#ff0000" aria-label="Red"></button>
+          <button type="button" class="swatch" data-rgb="255,128,0"   style="--c:#ff8000" aria-label="Orange"></button>
+          <button type="button" class="swatch" data-rgb="255,255,0"   style="--c:#ffff00" aria-label="Yellow"></button>
+          <button type="button" class="swatch" data-rgb="0,255,0"     style="--c:#00ff00" aria-label="Green"></button>
+          <button type="button" class="swatch" data-rgb="0,255,255"   style="--c:#00ffff" aria-label="Cyan"></button>
+          <button type="button" class="swatch" data-rgb="0,0,255"     style="--c:#0000ff" aria-label="Blue"></button>
+          <button type="button" class="swatch" data-rgb="255,0,255"   style="--c:#ff00ff" aria-label="Magenta"></button>
+          <label class="swatch swatch-custom" aria-label="Custom colour">
+            <input type="color" id="color-input" value="#00ff00">
+          </label>
+        </div>
+      </section>
+
+      <!-- Sound control -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Buzzer</h2>
+          <label class="switch">
+            <input type="checkbox" id="buzzer-toggle">
+            <span class="track"><span class="thumb"></span></span>
+            <span class="sr-only">Buzzer on or off</span>
+          </label>
+        </div>
+        <div class="sound-state" id="sound-state" data-on="0">
+          <span class="wave" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span id="sound-label">Silent</span>
+        </div>
+        <p class="muted">The buzzer also sounds automatically when the door opens.</p>
+      </section>
+
+      <!-- Event log -->
+      <section class="card log-card">
+        <div class="card-head">
+          <h2>Activity</h2>
+          <button class="btn btn-ghost" id="notify-btn" type="button">Enable notifications</button>
+        </div>
+        <ol class="log" id="log"></ol>
+      </section>
+    </div>
+
+    <!-- Only visible in mock mode: pretend to be the reed switch -->
+    <section class="card demo" id="demo" hidden>
+      <div>
+        <h2>Demo mode</h2>
+        <p class="muted">No cloud connection is configured, so the page is talking to a simulated board. Move the “magnet” to test the alarm.</p>
+      </div>
+      <button class="btn" id="demo-door" type="button">Open door</button>
+    </section>
+
+    <p class="pending" id="pending" hidden>Sending…</p>
+  </main>
+
+  <!-- config.js holds the NETPIE credentials and is not committed. Copy config.example.js to create it. -->
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

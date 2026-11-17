@@ -15,6 +15,7 @@ Thumbs.db
 secrets.h
 wifi_credentials.h
 .env
+dashboard/config.js
 
 # ==========================================
 # 3. Compiled Objects & Firmware Binaries
