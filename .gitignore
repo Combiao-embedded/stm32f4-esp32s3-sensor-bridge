@@ -67,3 +67,12 @@ managed_components/
 # ==========================================
 .vscode/*
 !.vscode/extensions.json
+
+# STM32CubeMX & STM32CubeIDE
+.mxproject
+Debug/
+Release/
+build/
+.settings/
+.metadata/
+*.launch
