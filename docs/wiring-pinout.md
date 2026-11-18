@@ -77,9 +77,10 @@ When the KY-021 reports the door **open** (`"reed":1`), the STM32 latches an ala
 - Optionally add `"seq"`: a counter incremented on every publish. The dashboard uses it to tell "board offline" apart from "cloud reachable".
 
 ### Dashboard → ESP32-S3 → STM32F4 (commands)
-The dashboard sends JSON text to the NETPIE message topic `@msg/cmd`; the ESP32 forwards it unchanged over UART. One field per message:
+The dashboard sends JSON text to the NETPIE message topic `@msg/cmd`. Every command is a full state packet in the format the ESP32 accepts:
 ```json
-{"buzzer":0}
-{"rgb":[0,0,255]}
-{"ack":1}
+{"data":{"reed_state":1,"buzzer":1,"rgb":[0,255,0],"ack":0}}
 ```
+- Fields the user did not change carry their current value.
+- `ack` is `1` only when the user presses **Acknowledge**, otherwise `0`.
+- `reed_state` is the door state the dashboard last saw. The board should keep reading the door from its own sensor, not from this field.

@@ -19,7 +19,14 @@ Browser (app.js) ──fetch PUT /message──> NETPIE ──@msg/cmd──> ES
 Browser (app.js) <──fetch GET /shadow── NETPIE <──shadow───── ESP32 <──UART── STM32
 ```
 
+Commands are sent as a full state packet, for example `{"data":{"reed_state":1,"buzzer":1,"rgb":[0,255,0],"ack":0}}`.
+
 The shadow can be as small as `{"reed_state": 1}` (`reed` and `reed_state` both work). If the board does not report `alarm`, the page raises the alarm itself when the door opens and clears it when you press Acknowledge.
+
+### Realtime updates
+The page also connects to NETPIE over **MQTT on WebSocket** (`wss://mqtt.netpie.io/mqtt`). It listens on `@msg/state` and updates the moment a message arrives. Commands go out over MQTT as well. REST polling stays on as a slow backup (every 15 s) and speeds up to every 2 s if realtime drops. For realtime to work:
+- The board (ESP32) must publish its state to `@msg/state`, in addition to `@shadow/data/update`.
+- The dashboard must use **its own device** in the same Device Group. MQTT allows one connection per Client ID. If the page detects that its ID is in use elsewhere, it stops realtime and falls back to polling.
 
 The page uses the NETPIE 2020 REST API (`https://api.netpie.io/v2/device`). The API allows browser requests (CORS `*`). The packet format is in [`docs/wiring-pinout.md`](../docs/wiring-pinout.md#4-dashboard-additions-proposed--needs-stm32--esp32-sign-off).
 

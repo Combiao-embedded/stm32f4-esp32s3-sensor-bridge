@@ -20,9 +20,14 @@ const CFG = Object.assign(
     mode: "mock",            // "mock" or "netpie"
     clientId: "",
     token: "",
-    deviceAlias: "",         // alias of the ESP32 device in the same NETPIE group
+    deviceAlias: "",         // alias of the ESP32 device in the same group; empty = read this device's own shadow
+    secret: "",              // device secret (optional for NETPIE MQTT)
     commandTopic: "cmd",     // ESP32 subscribes to @msg/<commandTopic>
-    pollMs: 2000,
+    stateTopic: "state",     // board publishes its state to @msg/<stateTopic> for realtime updates
+    realtime: true,          // use MQTT over WebSocket when available
+    mqttUrl: "wss://mqtt.netpie.io/mqtt",
+    pollMs: 2000,            // REST polling interval without realtime
+    slowPollMs: 15000,       // REST polling interval while realtime is connected (backup only)
     offlineAfterMs: 10000,
     commandTimeoutMs: 6000,
   },
@@ -48,7 +53,9 @@ function netpieTransport() {
   return {
     label: "NETPIE",
     async getState() {
-      const url = `${base}/shadow/data?alias=${encodeURIComponent(CFG.deviceAlias)}`;
+      const url = CFG.deviceAlias
+        ? `${base}/shadow/data?alias=${encodeURIComponent(CFG.deviceAlias)}`
+        : `${base}/shadow/data`;
       const res = await fetch(url, { headers: auth, cache: "no-store" });
       if (!res.ok) throw new Error(`Shadow read failed (${res.status})`);
       const json = await res.json();
@@ -105,7 +112,7 @@ function mockTransport() {
 }
 
 let transport;
-if (CFG.mode === "netpie" && CFG.clientId && CFG.token && CFG.deviceAlias) {
+if (CFG.mode === "netpie" && CFG.clientId && CFG.token) {
   transport = netpieTransport();
 } else {
   transport = mockTransport();
@@ -127,7 +134,107 @@ const ui = {
   pending: null,          // { key, want, label, deadline }
   boardAlarm: false,      // true when the board itself reports "alarm"
   localAlarm: false,      // page-side alarm used when the board does not report one
+  boardReports: null,     // { buzzer, rgb }: which values the board's state includes
+  lastRaw: {},            // last raw state, so partial realtime messages can be merged
+  mqtt: "off",            // "off" | "connecting" | "connected" | "down" | "conflict"
 };
+
+/* ------------------------------------------------------------------ */
+/* Realtime (MQTT over WebSocket)                                      */
+/* ------------------------------------------------------------------ */
+
+let mqttClient = null;
+
+function startRealtime() {
+  if (isMock || !CFG.realtime) return;
+  if (!window.mqtt) {
+    log("Realtime library did not load — falling back to polling.", "alarm");
+    return;
+  }
+
+  ui.mqtt = "connecting";
+  let connectedAt = 0;
+  let quickDrops = 0;
+
+  mqttClient = window.mqtt.connect(CFG.mqttUrl, {
+    clientId: CFG.clientId,
+    username: CFG.token,
+    password: CFG.secret || undefined,
+    protocolVersion: 4,
+    clean: true,
+    reconnectPeriod: 5000,
+    connectTimeout: 8000,
+  });
+
+  mqttClient.on("connect", () => {
+    if (ui.mqtt === "conflict") return; // stopped on purpose; ignore late connects
+    connectedAt = Date.now();
+    ui.mqtt = "connected";
+    mqttClient.subscribe(`@msg/${CFG.stateTopic}`);
+    log(`Realtime connected (listening on @msg/${CFG.stateTopic})`, "ok");
+    render();
+  });
+
+  mqttClient.on("message", (topic, payload) => {
+    let msg;
+    try { msg = JSON.parse(payload.toString()); } catch { return; }
+    const data = msg && typeof msg === "object" && msg.data ? msg.data : msg;
+    if (!data || typeof data !== "object") return;
+    ui.lastOkAt = Date.now();
+    applyState({ ...ui.lastRaw, ...data });
+  });
+
+  mqttClient.on("close", () => {
+    if (ui.mqtt === "conflict") return;
+    // MQTT allows one connection per Client ID. If we keep getting dropped
+    // right after connecting, someone else (ESP32, MQTTX) is using the same
+    // ID: stop, instead of kicking each other off forever.
+    if (connectedAt && Date.now() - connectedAt < 15000) quickDrops += 1;
+    connectedAt = 0;
+    if (quickDrops >= 2) {
+      ui.mqtt = "conflict";
+      mqttClient.end(true);
+      log("Realtime stopped: this Client ID is in use elsewhere (ESP32/MQTTX). Use a separate dashboard device.", "alarm");
+    } else if (ui.mqtt === "connected") {
+      ui.mqtt = "down";
+      log("Realtime disconnected — polling until it reconnects.", "alarm");
+    }
+    render();
+  });
+
+  mqttClient.on("error", (err) => {
+    if (ui.mqtt !== "down") log(`Realtime error: ${err.message}`, "alarm");
+  });
+}
+
+/** Sends a command over MQTT when realtime is up, otherwise over REST. */
+function sendCmd(cmd) {
+  if (!isMock) cmd = boardPacket(cmd);
+  if (mqttClient && ui.mqtt === "connected") {
+    return new Promise((resolve, reject) =>
+      mqttClient.publish(`@msg/${CFG.commandTopic}`, JSON.stringify(cmd), (err) => (err ? reject(err) : resolve()))
+    );
+  }
+  return transport.send(cmd);
+}
+
+/**
+ * The ESP32 expects every command as a full state packet:
+ * {"data":{"reed_state":1,"buzzer":1,"rgb":[0,255,0],"ack":0}}
+ * Fields the user did not change keep their current value; ack is 1 only to acknowledge.
+ */
+function boardPacket(change) {
+  const s = ui.state || {};
+  return {
+    data: {
+      reed_state: s.reed ? 1 : 0,
+      buzzer: s.buzzer ? 1 : 0,
+      rgb: Array.isArray(s.rgb) ? s.rgb : [0, 0, 0],
+      ack: 0,
+      ...change,
+    },
+  };
+}
 
 /* ------------------------------------------------------------------ */
 /* Activity log                                                        */
@@ -202,7 +309,7 @@ function render() {
     $("conn-text").textContent = "Board offline";
   } else {
     conn.dataset.state = "online";
-    $("conn-text").textContent = `Online · ${clock(ui.lastOkAt)}`;
+    $("conn-text").textContent = ui.mqtt === "connected" ? "Online · realtime" : `Online · ${clock(ui.lastOkAt)}`;
   }
 
   // Demo button
@@ -216,6 +323,7 @@ function render() {
 function applyState(raw) {
   const prev = ui.state;
   const now = Date.now();
+  ui.lastRaw = raw;
   const reed = Number(raw.reed ?? raw.reed_state) ? 1 : 0;
 
   ui.boardAlarm = "alarm" in raw;
@@ -227,11 +335,13 @@ function applyState(raw) {
     alarm = ui.localAlarm ? 1 : 0;
   }
 
+  // Firmware that does not report buzzer/rgb yet: keep the value the page last sent.
+  ui.boardReports = { buzzer: "buzzer" in raw, rgb: Array.isArray(raw.rgb) };
   const next = {
     reed,
     alarm,
-    buzzer: raw.buzzer ? 1 : 0,
-    rgb: Array.isArray(raw.rgb) ? raw.rgb.map(clamp) : [0, 0, 0],
+    buzzer: ui.boardReports.buzzer ? (raw.buzzer ? 1 : 0) : prev ? prev.buzzer : 0,
+    rgb: ui.boardReports.rgb ? raw.rgb.map(clamp) : prev ? prev.rgb : [0, 0, 0],
     seq: raw.seq,
   };
 
@@ -291,7 +401,16 @@ async function command(cmd, key, want, label) {
   toast("Sending…");
   render();
   try {
-    await transport.send(cmd);
+    await sendCmd(cmd);
+    if (!isMock && ui.boardReports && ui.boardReports[key] === false && ui.state) {
+      // The board does not report this value, so there is nothing to confirm against.
+      ui.pending = null;
+      ui.state = { ...ui.state, [key]: want };
+      toast(null);
+      log(`${label} (sent; board does not report ${key} yet)`);
+      render();
+      return;
+    }
     setTimeout(poll, isMock ? 700 : 800);
   } catch (err) {
     ui.pending = null;
@@ -343,7 +462,7 @@ $("ack-btn").addEventListener("click", () => {
     log("Alarm acknowledged", "ok");
     render();
   }
-  transport.send({ ack: 1 }).catch(() => {});
+  sendCmd({ ack: 1 }).catch(() => {});
 });
 
 /* ------------------------------------------------------------------ */
@@ -404,7 +523,7 @@ async function poll() {
     settlePending();
     render();
   }
-  pollTimer = setTimeout(poll, CFG.pollMs);
+  pollTimer = setTimeout(poll, ui.mqtt === "connected" ? CFG.slowPollMs : CFG.pollMs);
 }
 
 /* ------------------------------------------------------------------ */
@@ -425,3 +544,4 @@ if (isMock) {
 
 render();
 poll();
+startRealtime();
