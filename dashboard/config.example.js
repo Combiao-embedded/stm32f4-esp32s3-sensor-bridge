@@ -11,10 +11,19 @@ window.DASHBOARD_CONFIG = {
   token: "YOUR_DASHBOARD_TOKEN",
 
   // Alias of the ESP32 device whose shadow holds the board state.
-  deviceAlias: "YOUR_ESP32_ALIAS",
+  // Leave empty ("") to read the shadow of the device above instead
+  // (handy when testing with a single device).
+  deviceAlias: "",
 
   // The ESP32 subscribes to @msg/<commandTopic>.
   commandTopic: "cmd",
 
-  pollMs: 2000,              // NETPIE rate-limits requests; keep this >= 1000
+  // Realtime: the page connects to wss://mqtt.netpie.io/mqtt with the Client ID
+  // above and listens on @msg/<stateTopic>. The board must publish its state
+  // there too (as well as to the shadow). MQTT allows one connection per
+  // Client ID, so the dashboard needs its own device, not the ESP32's.
+  realtime: true,
+  stateTopic: "state",
+
+  pollMs: 2000,              // REST polling when realtime is off; keep this >= 1000
 };
